@@ -48,8 +48,10 @@ export function PrivacyContent() {
       <ul>
         <li>No ads, and no advertising or analytics trackers.</li>
         <li>No selling, renting or sharing of your information for marketing.</li>
-        <li>No reading of shopping websites. MUSE only stores the links you paste; it doesn't visit them or pull details from them.</li>
       </ul>
+
+      <h2>Filling in items from a link</h2>
+      <p>When you paste a product link and tap <em>Fill in details</em>, MUSE's server opens that one page to read the product details the store publishes for previews, like the name, brand, price and photo. The details go straight into your form. The server doesn't keep the page or a record of the link; the link is saved only if you save the item. If you keep the photo, it's stored in your account like one you uploaded.</p>
 
       <h2>Companies that help run MUSE</h2>
       <ul>
@@ -97,7 +99,7 @@ export function TermsContent() {
       <p>Please don't use MUSE to break the law, to harass or track anyone, to upload harmful or illegal content, to access other people's accounts, or to try to damage, overload, copy or interfere with the app. We may suspend or close accounts that break these rules.</p>
 
       <h2>Stores, brands and prices</h2>
-      <p>MUSE isn't affiliated with, endorsed by, or paid by any store or brand you save. Brand names belong to their owners. Prices, sizes and other details in MUSE are whatever you enter, so they may be out of date or wrong. Always check the store before you buy. Purchases happen on other websites, under their terms.</p>
+      <p>MUSE isn't affiliated with, endorsed by, or paid by any store or brand you save. Brand names belong to their owners. Prices, sizes and other details in MUSE are whatever you enter or MUSE reads from a store's page when you ask it to, so they may be out of date or wrong. Always check the store before you buy. Purchases happen on other websites, under their terms.</p>
 
       <h2>Your data and backups</h2>
       <p>MUSE saves your information to your account and we work to keep it safe and available. No online service can promise data will never be lost, so we recommend downloading a backup from Settings now and then.</p>
@@ -123,7 +125,7 @@ const FAQ = [
   ['How do I bring in what I saved in the older version of MUSE?', 'In the older, on-device version, open Settings \u203a Backup & export and export a full backup. Then in this version, open Settings \u203a Backup & export, choose the file under Restore, and pick Add to my account.'],
   ['How do I install MUSE on my iPhone?', 'Open MUSE in Safari, tap the Share button, then Add to Home Screen. It opens full-screen like a regular app.'],
   ['I forgot my password.', 'On the sign-in screen, tap \u201cForgot your password?\u201d and we\u2019ll email you a link to choose a new one. Open the link on the same device.'],
-  ['Why doesn\u2019t MUSE fill in details from a product link?', 'MUSE doesn\u2019t visit or copy from store websites. Paste the link so you can get back to the item, and add the name, price and photo yourself.'],
+  ['How do I add an item from a link?', 'Tap +, choose the kind of item, and paste the product link at the top. MUSE fills in the name, brand, price and photo when the store shares them. Some stores, like Amazon, block apps from reading their pages, so you\u2019ll fill in what\u2019s missing yourself. Always check the size and color.'],
   ['How do I mark something as bought?', 'Press and hold an item (or tap \u22ef on its card) and choose \u201cI bought it.\u201d You can also change the status on the item itself.'],
   ['I deleted something by accident.', 'Tap Undo on the message that appears right after deleting.'],
   ['Where did my holiday list go?', 'Lists move to Settings \u203a Archived Lists the day after their date. Open one and tap \u201cBring back for next year\u201d to reuse it.'],

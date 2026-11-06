@@ -3,6 +3,7 @@ import { useStore } from './store.jsx';
 import { useNav } from './nav.js';
 import { Btn, IconBtn, Icon, Field, Img, ImageInput, Modal, Empty, Chip, useUi, useDirty, useGuardedClose } from './ui.jsx';
 import { CLOTHING_TYPES, clothingType } from './data.jsx';
+import { readProductLink, fetchProductPhoto, guessMakeupType } from './linkfill.js';
 import { money, fmtDate, matches, sortList, SORTS, STATUS, PRIORITY, label, validUrl, parsePrice, statusList } from './util.js';
 
 const { useState, useMemo, useRef } = React;
@@ -165,6 +166,46 @@ export function ProductEditor({ product, kind, categoryId, personId, occasionId,
   const dirty = useDirty({ init, img: { keep: !!product?.imageId, url: product?.imageUrl || '' } }, { init: d, img: { keep: img.keep, url: img.url, f: img.file ? img.file.name + img.file.size : undefined } });
   const close = useGuardedClose(dirty, onClose);
   const set = (key) => (e) => setD({ ...d, [key]: e.target.value });
+  const [linkState, setLinkState] = useState({ busy: false, msg: '', kind: '' });
+  const live = useRef({ d, img });
+  live.current = { d, img };
+
+  /** Read the store page and fill in whatever is still empty. Nothing the person typed gets replaced. */
+  async function fillFromLink(rawUrl) {
+    const url = (rawUrl ?? d.url).trim();
+    if (!validUrl(url) || !url) { setLinkState({ busy: false, kind: 'error', msg: 'Paste a full product link that starts with https://' }); return; }
+    setLinkState({ busy: true, kind: '', msg: 'Reading the product page…' });
+    try {
+      const info = await readProductLink(url);
+      const filled = [];
+      const prev = live.current.d;
+      {
+        const next = { ...prev, url };
+        const put = (key, val, label) => { if (val != null && val !== '' && !String(prev[key] ?? '').trim()) { next[key] = String(val); filled.push(label); } };
+        put('name', info.name, 'name');
+        put('brand', info.brand, 'brand');
+        if (k !== 'makeup') put('store', info.store, 'store');
+        if (info.price != null && (!info.currency || info.currency === 'USD')) put('price', info.price.toFixed(2).replace(/\.00$/, ''), 'price');
+        if (k === 'clothing') { put('color', info.color, 'color'); put('productType', clothingType({ name: info.name || prev.name, productType: '' }), 'type'); }
+        if (k === 'makeup') { put('shadeName', info.color, 'shade'); put('productType', guessMakeupType(info.name || prev.name), 'type'); }
+        setD(next);
+      }
+      const cur = live.current.img;
+      const hasPhoto = cur.file || (cur.keep && cur.imageId) || cur.url;
+      if (info.image && !hasPhoto) {
+        setLinkState({ busy: true, kind: '', msg: 'Saving the photo…' });
+        const file = await fetchProductPhoto(info.image);
+        if (file) setImg((v) => ({ ...v, file, keep: false, url: '' })); else setImg((v) => ({ ...v, url: info.image }));
+        filled.push('photo');
+      }
+      const where = info.store ? ` from ${info.store}` : '';
+      const odd = info.price != null && info.currency && info.currency !== 'USD' ? ` The price is in ${info.currency}, so add the USD price yourself.` : '';
+      setLinkState({ busy: false, kind: filled.length ? 'ok' : 'error',
+        msg: filled.length ? `Filled in ${filled.join(', ').replace(/, ([^,]*)$/, ' and $1')}${where}.${info.price == null ? ' The store didn\u2019t share a price, so add it yourself.' : ''} ${k === 'makeup' ? 'Check the shade' : k === 'clothing' ? 'Check the size and color' : 'Check the details'} before saving.${odd}` : `Everything was already filled in.${odd}` });
+    } catch (err) {
+      setLinkState({ busy: false, kind: 'error', msg: err.message });
+    }
+  }
 
   async function save(e) {
     e.preventDefault();
@@ -194,6 +235,19 @@ export function ProductEditor({ product, kind, categoryId, personId, occasionId,
       <form id="product-form" className="form" onSubmit={save} noValidate>
         {cat && <p className="form-context">In <strong>{cat.name}</strong></p>}
         {k === 'gift' && fixedPerson && forName && <p className="form-context">For <strong>{forName}</strong></p>}
+        <div className="link-fill" role="group" aria-labelledby="link-fill-label">
+          <label id="link-fill-label" htmlFor="product-link" className="label-text">Product link</label>
+          <div className="link-fill-row">
+            <input id="product-link" className="input" type="url" inputMode="url" value={d.url} placeholder="Paste a link from any store"
+              aria-invalid={errors.url ? 'true' : undefined}
+              onChange={set('url')}
+              onPaste={(e) => { const t = (e.clipboardData?.getData('text') || '').trim(); if (/^https?:\/\//i.test(t) && !d.name.trim()) setTimeout(() => fillFromLink(t), 0); }} />
+            <Btn variant="secondary" icon="search" disabled={linkState.busy || !d.url.trim()} onClick={() => fillFromLink()}>{linkState.busy ? 'Reading…' : 'Fill in details'}</Btn>
+          </div>
+          {errors.url && <p className="error">{errors.url}</p>}
+          {linkState.msg && <p className={`link-fill-msg ${linkState.kind}`} role="status">{linkState.msg}</p>}
+          {!linkState.msg && !errors.url && <p className="hint">Paste a link and MUSE fills in the name, brand, price and photo when the store shares them.</p>}
+        </div>
         <div className="form-grid">
           {k === 'gift' && !fixedPerson && (
             <Field label="For *" error={errors.personId} full>
@@ -246,9 +300,6 @@ export function ProductEditor({ product, kind, categoryId, personId, occasionId,
           </Field>
           <Field label={k === 'gift' ? 'Gift status' : 'Purchase status'}>
             <select className="input select" value={d.status} onChange={set('status')}>{statuses.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-          </Field>
-          <Field label="Product link" error={errors.url} hint="Paste the shop page. MUSE won't read details from it, so fill them in above." full>
-            <input className="input" type="url" value={d.url} onChange={set('url')} placeholder="https://" />
           </Field>
           <ImageInput label="Photo" value={img} onChange={setImg} />
           {errors.imageUrl && <p className="error full" role="alert">{errors.imageUrl}</p>}
