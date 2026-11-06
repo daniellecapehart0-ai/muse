@@ -6,7 +6,7 @@ import { THEMES, applyTheme, applyAppearance, currentTheme, currentAppearance } 
 import { getName, saveName } from './data.jsx';
 import { fmtDate, nextDate } from './util.js';
 import { APP } from './legal.jsx';
-import { supabase } from './supabase.js';
+import { supabase, rememberMe, setRememberMe } from './supabase.js';
 import { deleteAccount } from './db.js';
 import { Btn } from './ui.jsx';
 
@@ -20,6 +20,7 @@ export function SettingsView({ onReplayWelcome }) {
   const [mode, setMode] = useState(currentAppearance);
   const [name, setName] = useState(getName);
   const [email, setEmail] = useState('');
+  const [keep, setKeep] = useState(rememberMe);
   const [pwOpen, setPwOpen] = useState(false);
   const [pw, setPw] = useState('');
   const [pwMsg, setPwMsg] = useState('');
@@ -56,6 +57,12 @@ export function SettingsView({ onReplayWelcome }) {
             <span className="settings-row-icon" aria-hidden="true"><Icon name="person" size={20} /></span>
             <span className="settings-row-text"><span className="settings-row-title">Signed in as</span><span className="muted email-line">{email || '…'}</span></span>
           </div>
+          <label className="settings-row toggle-row" htmlFor="keep-signed-in">
+            <span className="settings-row-icon" aria-hidden="true"><Icon name="check" size={20} /></span>
+            <span className="settings-row-text"><span className="settings-row-title">Keep me signed in</span><span className="muted">{keep ? 'MUSE stays signed in on this device until you sign out' : 'You\u2019ll sign in again each time you open MUSE'}</span></span>
+            <input id="keep-signed-in" type="checkbox" role="switch" className="switch" checked={keep}
+              onChange={async (e) => { const on = e.target.checked; setKeep(on); await setRememberMe(on); toast(on ? 'MUSE will keep you signed in' : 'MUSE will ask you to sign in next time'); }} />
+          </label>
           <button type="button" className="settings-row" onClick={() => { setPwOpen(!pwOpen); setPwMsg(''); }} aria-expanded={pwOpen}>
             <span className="settings-row-icon" aria-hidden="true"><Icon name="edit" size={20} /></span>
             <span className="settings-row-text"><span className="settings-row-title">Change password</span></span>

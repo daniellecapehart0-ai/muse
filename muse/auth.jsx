@@ -1,5 +1,5 @@
 import React from 'react';
-import { supabase } from './supabase.js';
+import { supabase, rememberMe, setRememberMe, lastEmail, saveLastEmail, askToKeepStorage } from './supabase.js';
 import { setUser, loadProfile } from './db.js';
 import { BagArt } from './splash.jsx';
 import { DocSheet, APP } from './legal.jsx';
@@ -34,8 +34,10 @@ function PasswordField({ id, label, value, onChange, autoComplete }) {
 
 /** Sign in, create an account, or get a reset link. */
 export function AuthScreen() {
-  const [mode, setMode] = useState('signup'); // signup | signin | forgot
-  const [email, setEmail] = useState('');
+  const returning = lastEmail();
+  const [mode, setMode] = useState(returning ? 'signin' : 'signup'); // signup | signin | forgot
+  const [email, setEmail] = useState(returning);
+  const [keep, setKeep] = useState(rememberMe);
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [agree, setAgree] = useState(false);
@@ -54,9 +56,11 @@ export function AuthScreen() {
     if (mode === 'signup' && !agree) { setError(`To create an account, confirm you're ${APP.minAge} or older and agree to the Terms and Privacy Policy.`); return; }
     setBusy(true);
     try {
+      if (mode !== 'forgot') await setRememberMe(keep);
       if (mode === 'signin') {
         const { error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (err) throw err;
+        saveLastEmail(keep ? email.trim() : '');
       } else if (mode === 'signup') {
         const { data, error: err } = await supabase.auth.signUp({
           email: email.trim(), password,
@@ -64,6 +68,7 @@ export function AuthScreen() {
         });
         if (err) throw err;
         if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) throw new Error('already registered');
+        saveLastEmail(keep ? email.trim() : '');
         try { localStorage.setItem('muse-name', name.trim()); localStorage.setItem('muse-welcomed', '1'); } catch { /* optional */ }
         if (data.session) {
           if (name.trim()) await supabase.from('profiles').update({ display_name: name.trim() }).eq('id', data.user.id);
@@ -93,6 +98,7 @@ export function AuthScreen() {
           </div>
         )}
         <form className="auth-form" onSubmit={submit} noValidate>
+          {mode === 'signin' && returning && email === returning && <p className="auth-welcome">Welcome back! Sign in to pick up where you left off.</p>}
           {mode === 'forgot' && <><h1 className="auth-title">Reset your password</h1><p className="hint">Enter your email and we'll send you a link to choose a new password.</p></>}
           {mode === 'signup' && (
             <div className="field">
@@ -107,6 +113,12 @@ export function AuthScreen() {
           {mode !== 'forgot' && (
             <PasswordField id="auth-password" label={mode === 'signup' ? 'Create a password (8+ characters)' : 'Password'} value={password} onChange={setPassword}
               autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} />
+          )}
+          {mode !== 'forgot' && (
+            <label className="check auth-keep">
+              <input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} />
+              <span>Keep me signed in on this device</span>
+            </label>
           )}
           {mode === 'signup' && (
             <label className="check auth-agree">
@@ -167,6 +179,7 @@ export function AuthGate({ children }) {
   const [ready, setReady] = useState(null); // user id whose profile has loaded
 
   useEffect(() => {
+    askToKeepStorage();
     supabase.auth.getSession().then(({ data }) => setSession(data.session || null));
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       if (event === 'PASSWORD_RECOVERY') setRecovery(true);
