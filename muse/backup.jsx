@@ -47,6 +47,7 @@ function remapIds(data, images) {
   data.occasions.forEach((o) => { o.coverImageId = fix(o.coverImageId); o.productIds = o.productIds.map(fix); });
   data.outfits.forEach((o) => { o.coverImageId = fix(o.coverImageId); o.pieces.forEach((x) => { x.id = fix(x.id); x.productId = fix(x.productId); }); });
   data.routines.forEach((r) => { r.coverImageId = fix(r.coverImageId); r.steps.forEach((s) => { s.id = fix(s.id); s.productId = fix(s.productId); }); });
+  (data.packages || []).forEach((k) => { k.id = fix(k.id); k.productId = fix(k.productId); });
   images.forEach((im) => { im.id = fix(im.id); });
 }
 
@@ -66,7 +67,7 @@ export function BackupPanel({ onClose }) {
       const imgs = await getAll('images');
       const images = [];
       for (const r of imgs) if (r.blob instanceof Blob) images.push({ id: r.id, type: r.blob.type, data: await blobToDataURL(r.blob) });
-      const payload = { app: 'MUSE', version: 1, exportedAt: new Date().toISOString(), products: store.products, categories: store.categories, outfits: store.outfits, routines: store.routines, people: store.people, occasions: store.allOccasions, images };
+      const payload = { app: 'MUSE', version: 1, exportedAt: new Date().toISOString(), products: store.products, categories: store.categories, outfits: store.outfits, routines: store.routines, people: store.people, occasions: store.allOccasions, packages: store.packages, images };
       const text = JSON.stringify(payload);
       const r = await saveFile(`muse-backup-${stamp()}.json`, text, 'application/json');
       if (r === 'saved') toast('Backup saved');

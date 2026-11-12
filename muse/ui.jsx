@@ -30,6 +30,8 @@ const P = {
   person: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21c0-4 4-6 8-6s8 2 8 6',
   calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
   more: 'M5 12h.01M12 12h.01M19 12h.01',
+  box: 'M3 7.5l9-4.5 9 4.5v9L12 21l-9-4.5zM3 7.5l9 4.5 9-4.5M12 12v9M7.5 5.2l9 4.6',
+  bell: 'M6 16v-5a6 6 0 1 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0',
 };
 export function Icon({ name, size = 18, filled }) {
   return (

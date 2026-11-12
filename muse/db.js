@@ -4,7 +4,7 @@
 import { supabase } from './supabase.js';
 import { PHOTO_BUCKET } from './config.js';
 
-export const STORES = ['products', 'categories', 'outfits', 'routines', 'people', 'occasions', 'images'];
+export const STORES = ['products', 'categories', 'outfits', 'routines', 'people', 'occasions', 'packages', 'images'];
 
 let uid = null;
 /** Called when someone signs in or out. Every query below is scoped to this account. */
@@ -75,6 +75,16 @@ const MAP = {
     fromRow: (r) => ({ id: r.id, name: r.name, description: r.description, tags: r.tags || [], season: r.season, occasion: r.occasion, notes: r.notes, favorite: r.favorite, coverImageId: idOf(r.cover_path), pieces: (r.outfit_pieces || []).sort((a, b) => a.position - b.position).map((x) => ({ id: x.id, productId: x.product_id })), createdAt: ms(r.created_at), updatedAt: ms(r.updated_at) }),
     child: { table: 'outfit_pieces', fk: 'outfit_id', rows: (o) => (o.pieces || []).filter((x) => isUuid(x.productId)).map((x, i) => ({ id: isUuid(x.id) ? x.id : newId(), user_id: uid, outfit_id: o.id, product_id: x.productId, position: i })) },
   },
+  packages: {
+    table: 'packages', select: '*',
+    // reminded_* columns are only ever written by the reminder job, so they're left out here
+    toRow: (k) => ({ id: k.id, user_id: uid, product_id: isUuid(k.productId) ? k.productId : null, name: k.name, store: k.store, carrier: k.carrier, tracking_number: k.trackingNumber,
+      expected_date: k.expectedDate, remind: k.remind, message: k.message, timezone: k.timezone, delivered: k.delivered, delivered_at: iso(k.deliveredAt), notes: k.notes,
+      created_at: iso(k.createdAt), updated_at: iso(k.updatedAt) }),
+    fromRow: (r) => ({ id: r.id, productId: r.product_id, name: r.name, store: r.store, carrier: r.carrier, trackingNumber: r.tracking_number, expectedDate: r.expected_date,
+      remind: r.remind, message: r.message, timezone: r.timezone, delivered: r.delivered, deliveredAt: ms(r.delivered_at), notes: r.notes,
+      remindedBeforeAt: ms(r.reminded_before_at), remindedDayofAt: ms(r.reminded_dayof_at), createdAt: ms(r.created_at), updatedAt: ms(r.updated_at) }),
+  },
   routines: {
     table: 'routines', select: '*, routine_steps(*)',
     toRow: (r) => ({ id: r.id, user_id: uid, name: r.name, description: r.description, occasion: r.occasion, duration: r.duration, notes: r.notes, favorite: r.favorite, cover_path: pathOf(r.coverImageId), created_at: iso(r.createdAt), updated_at: iso(r.updatedAt) }),
@@ -83,8 +93,13 @@ const MAP = {
     child: { table: 'routine_steps', fk: 'routine_id', rows: (r) => (r.steps || []).map((s, i) => ({ id: isUuid(s.id) ? s.id : newId(), user_id: uid, routine_id: r.id, product_id: isUuid(s.productId) ? s.productId : null, position: i, standalone_name: s.standalone?.name || '', standalone_brand: s.standalone?.brand || '', standalone_shade: s.standalone?.shade || '', instructions: s.instructions || '', notes: s.notes || '', owned: !!s.owned })) },
   },
 };
+/** Tables from later updates; if the database doesn't have them yet, MUSE treats them as empty. */
+const OPTIONAL = new Set(['packages']);
+export const missing = new Set();
+export const needsUpdate = (store) => missing.has(store);
+
 // Parents are written before anything that points at them.
-const PUT_ORDER = ['categories', 'people', 'occasions', 'products', 'outfits', 'routines'];
+const PUT_ORDER = ['categories', 'people', 'occasions', 'products', 'packages', 'outfits', 'routines'];
 
 // Child rows are rewritten only when they changed since we last saw them.
 const childSig = new Map();
@@ -97,7 +112,10 @@ export async function getAll(store) {
   const m = MAP[store];
   const out = [];
   for (let from = 0; ; from += 1000) {
-    const rows = check(await supabase.from(m.table).select(m.select).eq('user_id', uid).order('created_at').range(from, from + 999));
+    const res = await supabase.from(m.table).select(m.select).eq('user_id', uid).order('created_at').range(from, from + 999);
+    // A table added in a newer update (like packages) may not exist yet; the rest of MUSE keeps working.
+    if (res.error && OPTIONAL.has(store) && /does not exist|could not find the table|PGRST205|42P01/i.test(`${res.error.code} ${res.error.message}`)) { missing.add(store); return []; }
+    const rows = check(res);
     rows.forEach((r) => { const rec = m.fromRow(r); out.push(rec); if (m.child) childSig.set(store + ':' + rec.id, sigOf(store, rec)); });
     if (rows.length < 1000) break;
   }
@@ -183,6 +201,7 @@ export async function commit(ops) {
 
   for (const s of PUT_ORDER) {
     const recs = ops.put?.[s];
+    if (recs?.length && missing.has(s)) throw new Error('Packages need a quick database update first. Run supabase-packages.sql in Supabase.');
     if (recs?.length) check(await supabase.from(MAP[s].table).upsert(recs.map(MAP[s].toRow), { onConflict: 'id' }));
   }
   for (const s of PUT_ORDER) {

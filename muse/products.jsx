@@ -466,6 +466,7 @@ export function QuickActions({ id, onClose }) {
         {!done && <Row icon="check" title={p.kind === 'gift' ? 'Mark as bought' : 'I bought it'} sub={p.price != null ? money(p.price) : undefined} onClick={() => act(() => actions.patchProduct(p.id, { status: 'purchased' }))} />}
         {p.kind === 'gift' && p.status !== 'given' && <Row icon="gift" title="Mark as given" onClick={() => act(() => actions.patchProduct(p.id, { status: 'given' }))} />}
         {done && <Row icon="back" title={p.kind === 'gift' ? 'Move back to ideas' : 'Move back to wishlist'} onClick={() => act(() => actions.patchProduct(p.id, { status: 'want' }))} />}
+        {!done && <Row icon="box" title="Track a package" sub="Get a reminder before it arrives" onClick={() => open({ type: 'package-edit', productId: p.id })} />}
         <Row icon="heart" title={p.favorite ? 'Remove from favorites' : 'Add to favorites'} onClick={() => act(() => actions.patchProduct(p.id, { favorite: !p.favorite }))} />
         <Row icon="edit" title="Edit" onClick={() => open({ type: 'product-edit', product: p })} />
         {p.url && validUrl(p.url) && (

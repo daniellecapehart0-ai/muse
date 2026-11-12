@@ -10,6 +10,8 @@ import { BackupPanel } from './backup.jsx';
 import { Splash } from './splash.jsx';
 import { SettingsView } from './settings.jsx';
 import { DataView, DataCard } from './data.jsx';
+import { PackagesView, PackagesCard, PackageEditor } from './packages.jsx';
+import { registerServiceWorker } from './push.js';
 import { DocPage, APP } from './legal.jsx';
 import { AuthGate } from './auth.jsx';
 import { applyTheme, currentTheme } from './themes.js';
@@ -126,6 +128,7 @@ function Home() {
         <h1 className="hero-title">Everything you're saving up for.</h1>
         {isEmpty && <p className="lede">Save clothes and makeup you want, plan outfits and routines, and keep gift ideas for the people you love. Tap + to add your first item.</p>}
         <DataCard />
+        <PackagesCard />
       </section>
       <div className="seg-tabs" role="tablist" aria-label="Wishlists">
         <Tab id="clothing">Clothes <span className="pill-count num">{count('clothing')}</span></Tab>
@@ -193,6 +196,7 @@ function AddSheet({ onClose }) {
     ['Makeup routine', 'list', { type: 'routine-edit' }],
     ['Collection', 'folder', { type: 'category-edit' }],
     ['Holiday list', 'calendar', { type: 'occasion-edit' }],
+    ['Package', 'box', { type: 'package-edit' }],
     ['Gift profile', 'person', { type: 'person-edit' }],
     ...(people.length ? [['Gift idea', 'gift', { type: 'product-edit', kind: 'gift' }]] : []),
   ];
@@ -208,7 +212,7 @@ function AddSheet({ onClose }) {
 function Organize({ route }) {
   const { categories } = useStore();
   const { go } = useNav();
-  const tabs = [['closet', 'Future Closet'], ['routines', 'Makeup Routines'], ['collections', 'Collections']];
+  const tabs = [['closet', 'Future Closet'], ['routines', 'Makeup Routines'], ['packages', 'Packages'], ['collections', 'Collections']];
   return (
     <>
       <nav className="subnav" aria-label="Organize views">
@@ -218,6 +222,7 @@ function Organize({ route }) {
       </nav>
       {route === 'closet' && <OutfitsView />}
       {route === 'routines' && <RoutinesView />}
+      {route === 'packages' && <PackagesView />}
       {route === 'collections' && <CollectionsView />}
       {route.startsWith('c-') && <CollectionView id={route.slice(2)} />}
     </>
@@ -270,6 +275,7 @@ function ModalHost({ stack, closeTop, replaceTop }) {
       case 'occasion-edit': return wrap(<OccasionEditor occasion={m.occasion} stay={m.stay} onClose={onClose} />);
       case 'backup': return wrap(<BackupPanel onClose={closeTop} />);
       case 'add-menu': return wrap(<AddSheet onClose={closeTop} />);
+      case 'package-edit': return wrap(<PackageEditor pkg={m.pkg} productId={m.productId} onClose={closeTop} />);
       case 'quick': return wrap(<QuickActions id={m.id} onClose={closeTop} />);
       default: return null;
     }
@@ -298,7 +304,7 @@ function Shell() {
   const closeTop = useCallback(() => setStack((s) => s.slice(0, -1)), []);
   const replaceTop = useCallback((m) => setStack((s) => [...s.slice(0, -1), withKey(m)]), []);
   const nav = useMemo(() => ({ go, open }), [go, open]);
-  const valid = ['home', 'closet', 'routines', 'collections'].includes(route) || route.startsWith('c-') || isGifts(route) || ['settings', 'data', 'privacy', 'terms', 'help'].includes(route);
+  const valid = ['home', 'closet', 'routines', 'packages', 'collections'].includes(route) || route.startsWith('c-') || isGifts(route) || ['settings', 'data', 'privacy', 'terms', 'help'].includes(route);
   const r = valid ? route : 'home';
 
   let main;
@@ -360,7 +366,7 @@ function LaunchSplash() {
 
 /** The whole app: launch animation, then sign-in, then MUSE for the signed-in person. */
 export default function MuseRoot() {
-  useEffect(() => { applyTheme(currentTheme()); }, []);
+  useEffect(() => { applyTheme(currentTheme()); registerServiceWorker(); }, []);
   return (
     <Boundary>
       <UiProvider>

@@ -9,6 +9,7 @@ import { APP } from './legal.jsx';
 import { supabase, rememberMe, setRememberMe } from './supabase.js';
 import { deleteAccount } from './db.js';
 import { Btn } from './ui.jsx';
+import { NotificationSettings } from './packages.jsx';
 
 const { useState } = React;
 
@@ -80,6 +81,11 @@ export function SettingsView({ onReplayWelcome }) {
             <span className="settings-row-text"><span className="settings-row-title">Sign out</span></span>
           </button>
         </div>
+      </section>
+
+      <section className="section" aria-labelledby="notif-h">
+        <h2 className="section-title" id="notif-h">Notifications</h2>
+        <NotificationSettings />
       </section>
 
       <section className="section" aria-labelledby="you-h">

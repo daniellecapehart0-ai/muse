@@ -53,6 +53,9 @@ export function PrivacyContent() {
       <h2>Filling in items from a link</h2>
       <p>When you paste a product link and tap <em>Fill in details</em>, MUSE's server opens that one page to read the product details the store publishes for previews, like the name, brand, price and photo. The details go straight into your form. The server doesn't keep the page or a record of the link; the link is saved only if you save the item. If you keep the photo, it's stored in your account like one you uploaded.</p>
 
+      <h2>Packages and reminders</h2>
+      <p>Packages you add, including tracking numbers and reminder messages, are saved to your account like everything else. If you turn on notifications, MUSE saves an address for your device from Apple's or your browser's notification service, and your time zone so reminders come in the morning. Each reminder's title and message pass through that notification service to reach your device. Turn notifications off in Settings at any time and the device address is removed.</p>
+
       <h2>Companies that help run MUSE</h2>
       <ul>
         <li><strong>Supabase</strong> provides sign-in, the database and photo storage.</li>
@@ -124,6 +127,7 @@ const FAQ = [
   ['How do I use MUSE on another device?', 'Open MUSE there and sign in with the same email and password. Everything is already there.'],
   ['How do I bring in what I saved in the older version of MUSE?', 'In the older, on-device version, open Settings \u203a Backup & export and export a full backup. Then in this version, open Settings \u203a Backup & export, choose the file under Restore, and pick Add to my account.'],
   ['How do I install MUSE on my iPhone?', 'Open MUSE in Safari, tap the Share button, then Add to Home Screen. It opens full-screen like a regular app.'],
+  ['How do package reminders work?', 'Add a package under Organize \u203a Packages with the day it should arrive. MUSE sends a notification around 9 AM Pacific time the day before, that morning, or both, with your own message if you write one. On iPhone, open MUSE from its Home Screen icon and turn on notifications in Settings first.'],
   ['I forgot my password.', 'On the sign-in screen, tap \u201cForgot your password?\u201d and we\u2019ll email you a link to choose a new one. Open the link on the same device.'],
   ['How do I add an item from a link?', 'Tap +, choose the kind of item, and paste the product link at the top. MUSE fills in the name, brand, price and photo when the store shares them. Some stores, like Amazon, block apps from reading their pages, so you\u2019ll fill in what\u2019s missing yourself. Always check the size and color.'],
   ['How do I mark something as bought?', 'Press and hold an item (or tap \u22ef on its card) and choose \u201cI bought it.\u201d You can also change the status on the item itself.'],

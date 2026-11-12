@@ -1,14 +1,14 @@
 import React from 'react';
 import { getAll, getOne, commit, forgetImage } from './db.js';
-import { normalizeAll, normProduct, normCategory, normOutfit, normRoutine, normPerson, normOccasion } from './model.js';
+import { normalizeAll, normProduct, normCategory, normOutfit, normRoutine, normPerson, normOccasion, normPackage } from './model.js';
 import { uid, sortOccasions, isArchived } from './util.js';
 
 const { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } = React;
 const StoreCtx = createContext(null);
 export const useStore = () => useContext(StoreCtx);
 
-const EMPTY = { products: [], categories: [], outfits: [], routines: [], people: [], occasions: [] };
-const ALL_STORES = ['products', 'categories', 'outfits', 'routines', 'people', 'occasions', 'images'];
+const EMPTY = { products: [], categories: [], outfits: [], routines: [], people: [], occasions: [], packages: [] };
+const ALL_STORES = ['products', 'categories', 'outfits', 'routines', 'people', 'occasions', 'packages', 'images'];
 
 const isDone = (s) => s === 'purchased' || s === 'given';
 
@@ -118,6 +118,7 @@ export function StoreProvider({ children, onError, onDeleted, onPurchased }) {
         }) }));
       const occasions = d0.occasions.filter((o) => o.productIds.some((id) => set.has(id)))
         .map((o) => ({ ...o, productIds: o.productIds.filter((id) => !set.has(id)), updatedAt: now }));
+      const packages = d0.packages.filter((k) => set.has(k.productId)).map((k) => ({ ...k, productId: null, updatedAt: now }));
       const swap = (list, changed) => list.map((x) => changed.find((c) => c.id === x.id) || x);
       // keep everything needed to undo: the items, their photos, and the lists they were in before
       const undo = { put: {
@@ -125,14 +126,16 @@ export function StoreProvider({ children, onError, onDeleted, onPurchased }) {
         outfits: d0.outfits.filter((o) => outfits.some((x) => x.id === o.id)),
         routines: d0.routines.filter((r) => routines.some((x) => x.id === r.id)),
         occasions: d0.occasions.filter((o) => occasions.some((x) => x.id === o.id)),
+        packages: d0.packages.filter((k) => packages.some((x) => x.id === k.id)),
       } };
       const ok = await run(
-        { put: { outfits, routines, occasions }, del: { products: ids, images: prods.map((p) => p.imageId).filter(Boolean) } },
-        (d) => ({ ...d, products: d.products.filter((p) => !set.has(p.id)), outfits: swap(d.outfits, outfits), routines: swap(d.routines, routines), occasions: swap(d.occasions, occasions) }),
+        { put: { outfits, routines, occasions, packages }, del: { products: ids, images: prods.map((p) => p.imageId).filter(Boolean) } },
+        (d) => ({ ...d, products: d.products.filter((p) => !set.has(p.id)), outfits: swap(d.outfits, outfits), routines: swap(d.routines, routines), occasions: swap(d.occasions, occasions), packages: swap(d.packages, packages) }),
       );
       if (ok && onDeleted) onDeleted(prods.length === 1 ? `Deleted ${prods[0].name}` : `Deleted ${prods.length} items`, () => restoreSnap(undo));
       return ok;
     },
+    async savePackage(draft) { return saveDoc('packages', normPackage, draft, null, false); },
     async savePerson(draft, file, keepImage) { return saveDoc('people', normPerson, draft, file, keepImage); },
     async saveOccasion(draft, file, keepImage) { return saveDoc('occasions', normOccasion, draft, file, keepImage); },
     /** Deletes a gift profile and only that person's gift ideas. */
@@ -244,6 +247,7 @@ export function StoreProvider({ children, onError, onDeleted, onPurchased }) {
   const occasions = useMemo(() => allOccasions.filter((o) => !isArchived(o)), [allOccasions]);
   const archivedOccasions = useMemo(() => allOccasions.filter(isArchived).sort((a, b) => b.date.localeCompare(a.date)), [allOccasions]);
   const archivedIds = useMemo(() => new Set(archivedOccasions.map((o) => o.id)), [archivedOccasions]);
-  const value = { ...data, categories, people, occasions, allOccasions, archivedOccasions, archivedIds, byId, loading, loadError, invalid, status, actions, reload: load };
+  const packages = useMemo(() => [...data.packages].sort((a, b) => a.expectedDate.localeCompare(b.expectedDate) || a.createdAt - b.createdAt), [data.packages]);
+  const value = { ...data, categories, people, occasions, allOccasions, archivedOccasions, archivedIds, packages, byId, loading, loadError, invalid, status, actions, reload: load };
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }

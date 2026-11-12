@@ -109,7 +109,24 @@ export function normOccasion(r) {
   };
 }
 
-export const NORMALIZERS = { products: normProduct, categories: normCategory, outfits: normOutfit, routines: normRoutine, people: normPerson, occasions: normOccasion };
+export const CARRIERS = ['USPS', 'UPS', 'FedEx', 'Amazon', 'DHL', 'OnTrac', 'LaserShip', 'Other'];
+const localTz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Los_Angeles'; } catch { return 'America/Los_Angeles'; } };
+
+/** Package: something on its way. Reminders go out the day before and/or the morning it's due, in the person's time zone. */
+export function normPackage(r) {
+  if (!r || !okId(r.id) || !isoDate(r.expectedDate)) return null;
+  return {
+    id: r.id, productId: okId(r.productId) ? r.productId : null,
+    name: str(r.name).trim() || 'Package', store: str(r.store), carrier: str(r.carrier), trackingNumber: str(r.trackingNumber).trim(),
+    expectedDate: r.expectedDate, remind: oneOf(r.remind, ['before', 'dayof', 'both', 'off'], 'before'),
+    message: str(r.message).slice(0, 180), timezone: str(r.timezone) || localTz(),
+    delivered: !!r.delivered, deliveredAt: r.delivered ? num(r.deliveredAt) : null, notes: str(r.notes),
+    remindedBeforeAt: num(r.remindedBeforeAt), remindedDayofAt: num(r.remindedDayofAt),
+    createdAt: ts(r.createdAt), updatedAt: ts(r.updatedAt || r.createdAt),
+  };
+}
+
+export const NORMALIZERS = { products: normProduct, categories: normCategory, outfits: normOutfit, routines: normRoutine, people: normPerson, occasions: normOccasion, packages: normPackage };
 
 export function normalizeAll(raw) {
   const out = {}; let invalid = 0;
@@ -128,6 +145,8 @@ export function normalizeAll(raw) {
     return true;
   }).map((p) => (p.occasionId && p.occasionId !== 'birthday' && !occIds.has(p.occasionId) ? { ...p, occasionId: null } : p));
   out.people = out.people.map((p) => ({ ...p, eventIds: p.eventIds.filter((e) => e === 'birthday' || occIds.has(e)) }));
+  const productIds = new Set(out.products.map((p) => p.id));
+  out.packages = out.packages.map((k) => (k.productId && !productIds.has(k.productId) ? { ...k, productId: null } : k));
   const ownIds = new Set(out.products.filter((p) => p.kind !== 'gift').map((p) => p.id));
   out.occasions = out.occasions.map((o) => ({ ...o, productIds: o.productIds.filter((id) => ownIds.has(id)) }));
   return { data: out, invalid };

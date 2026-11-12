@@ -2,6 +2,7 @@ import React from 'react';
 import { supabase, rememberMe, setRememberMe, lastEmail, saveLastEmail, askToKeepStorage } from './supabase.js';
 import { setUser, loadProfile } from './db.js';
 import { BagArt } from './splash.jsx';
+import { syncNotifications } from './push.js';
 import { DocSheet, APP } from './legal.jsx';
 import { Icon } from './ui.jsx';
 
@@ -195,7 +196,7 @@ export function AuthGate({ children }) {
     let live = true;
     loadProfile().then((p) => {
       try { if (p && p.display_name) localStorage.setItem('muse-name', p.display_name); localStorage.setItem('muse-welcomed', '1'); } catch { /* optional */ }
-    }).catch(() => {}).finally(() => { if (live) setReady(userId); });
+    }).catch(() => {}).finally(() => { if (live) { setReady(userId); syncNotifications(); } });
     return () => { live = false; };
   }, [userId]);
 
